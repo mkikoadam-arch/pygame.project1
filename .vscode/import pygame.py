@@ -9,7 +9,7 @@ import sys
 pygame.init()
 pygame.mixer.init()
 
-pygame.mixer.music.load("game_music.mp3")
+pygame.mixer.musicg.load("game_music.mp3")
 winner_sound = pygame.mixer.Sound("winner.wav")
 lose_sound = pygame.mixer.Sound("lose.wav")
 
