@@ -9,7 +9,7 @@ import sys
 pygame.init()
 pygame.mixer.init()
 
-pygame.mixer.musicg.load("game_music.mp3")
+pygame.mixer.music.load("game_music.mp3")
 winner_sound = pygame.mixer.Sound("winner.wav")
 lose_sound = pygame.mixer.Sound("lose.wav")
 
@@ -71,71 +71,168 @@ food = [
 
 score = 0
 running = True
+# ============================
+# LEVEL SYSTEM
+# ============================
+
+current_level = 1
+highest_level = 1
+
+level_goals = {
+    1: 8,
+    2: 10,
+    3: 12,
+    4: 15,
+    5: 18,
+    6: 20,
+    7: 22,
+    8: 25,
+    9: 28,
+    10: 30
+}
+
+
+# Golden Apple
+golden_food = [
+    random.randint(0, ROWS - 1),
+    random.randint(0, ROWS - 1)
+]
+
+golden_visible = True
 
 # ============================
-# PART 6 - START MENU
+# POISON FRUIT
+# ============================
+
+poison_food = [
+    random.randint(0, ROWS - 1),
+    random.randint(0, ROWS - 1)
+]
+
+poison_visible = True
+
+normal_fps = 10
+slow_fps = 5
+
+poison_timer = 0
+
+
+# ============================
+# PART 7 - DRAW GAME
 # ============================
 
 def start_menu():
-    
-    pygame.mixer.music.play(-1)
 
+    global current_level
+
+    selected = 1
+
+    pygame.mixer.music.play(-1)
 
     while True:
 
-        screen.fill((20, 30, 60))
+        for y in range(HEIGHT):
+            color = (
+                20,
+                30 + y // 8,
+                80 + y // 6
+            )
+            pygame.draw.line(screen, color, (0, y), (WIDTH, y))
 
-        title = big_font.render("SNAKE GAME", True, GREEN)
-        screen.blit(title, (120, 90))
+            pygame.draw.rect(
+                screen,
+                (30,40,80),
+                (50,25,500,90),
+                border_radius=25
+            )
 
-        welcome = font.render(
-            "Welcome to Snake Game!",
-            True,
-            YELLOW
-        )
+            pygame.draw.rect(
+                screen,
+                YELLOW,
+                (50,25,500,90),
+                5,
+                border_radius=25
+            )
+        shadow = big_font.render("SNAKE ADVENTURE", True, BLACK)
+        shadow_rect = shadow.get_rect(center=(WIDTH // 2 + 3, 68))
+        screen.blit(shadow, shadow_rect)
+        title = big_font.render("SNAKE ADVENTURE", True, GREEN)
+        title_rect = title.get_rect(center=(WIDTH // 2, 65))
+        screen.blit(title, title_rect)
 
-        screen.blit(welcome, (140, 180))
+        info = font.render("Choose a Level", True, WHITE)
 
-        start = font.render(
-            "Press ENTER to Start",
-            True,
-            WHITE
-        )
+        info_rect = info.get_rect(center=(WIDTH // 2, 150))
 
-        screen.blit(start, (150, 280))
+        screen.blit(info, info_rect)
 
-        quit_text = font.render(
-            "Press ESC to Exit",
-            True,
-            RED
-        )
+        for level in range(1,11):
 
-        screen.blit(quit_text, (165, 330))
+            if level == selected:
+                color = YELLOW
+                arrow = ">"
+            else:
+                color = WHITE
+                arrow = " "
 
-        creator = font.render(
-            "Created by Adam",
-            True,
-            GRAY
-        )
+            if level <= highest_level:
+                status = "UNLOCKED"
+            else:
+                status = "LOCKED"
 
-        screen.blit(creator, (185, 500))
+            button_y = 170 + (level - 1) * 42
+            button = pygame.Rect(110, button_y, 380, 35)
 
-        pygame.display.update()
+            if level == selected:
+                pygame.draw.rect(screen, YELLOW, button, border_radius=12)
+                pygame.draw.rect(screen, WHITE, button, 3, border_radius=12)
+                text_color = BLACK
+            else:
+                pygame.draw.rect(screen, (40, 50, 90), button, border_radius=12)
+                pygame.draw.rect(screen, (90, 120, 255), button, 2, border_radius=12)
+                text_color = WHITE
+
+            text = font.render(
+                f"Level {level}   {status}",
+                True,
+                text_color
+            )
+
+            text_rect = text.get_rect(center=button.center)
+            screen.blit(text, text_rect)
+       
+
+        pygame.display.update()     
 
         for event in pygame.event.get():
 
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-            if event.type == pygame.KEYDOWN:
-
-                if event.key == pygame.K_RETURN:
-                    return
-
-                if event.key == pygame.K_ESCAPE:
+                if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+
+                if event.type == pygame.KEYDOWN:
+
+                    if event.key == pygame.K_UP:
+
+                        if selected > 1:
+                            selected -= 1
+
+                    elif event.key == pygame.K_DOWN:
+
+                        if selected < 10:
+                            selected += 1
+
+                    elif event.key == pygame.K_RETURN:
+
+                        if selected <= highest_level:
+
+                            current_level = selected
+                            return
+
+                    elif event.key == pygame.K_ESCAPE:
+
+                        pygame.quit()
+                        sys.exit()
 
 
 
@@ -147,6 +244,7 @@ def draw_game():
 
     # Background
     screen.fill(BLACK)
+
 
     # Draw Apple
     pygame.draw.circle(
@@ -170,6 +268,28 @@ def draw_game():
             6
         )
     )
+    if golden_visible:
+
+        pygame.draw.circle(
+            screen,
+            YELLOW,
+            (
+                golden_food[0] * CELL_SIZE + CELL_SIZE // 2,
+                golden_food[1] * CELL_SIZE + CELL_SIZE // 2
+            ),
+            CELL_SIZE // 2 - 2
+        )
+
+    if poison_visible:
+        pygame.draw.circle(
+            screen,
+            (180, 0, 180),   # purple
+            (
+                poison_food[0] * CELL_SIZE + CELL_SIZE // 2,
+                poison_food[1] * CELL_SIZE + CELL_SIZE // 2
+            ),
+            CELL_SIZE // 2 - 2
+        )
 
     # Draw Snake
     for i, block in enumerate(snake):
@@ -227,10 +347,14 @@ def draw_game():
 # PART 8 - MOVE SNAKE
 # ============================
 def move_snake():
-
+    global golden_food
+    global golden_visible   
     global score
     global food
     global running
+    global poison_food
+    global poison_visible
+    global poison_timer
 
     head = snake[0].copy()
 
@@ -253,11 +377,10 @@ def move_snake():
         score += 1
 
         # Win after 10 apples
-        if score >= 10:
-            pygame.mixer.music.stop()
-            winner_sound.play()
-            winner_screen()
-            running = False
+        if score >= level_goals[current_level]:
+
+            level_complete()
+
             return
 
         while True:
@@ -267,8 +390,34 @@ def move_snake():
                 random.randint(0, ROWS - 1)
             ]
 
+            # Golden Apple
+            golden_food = [
+                random.randint(0, ROWS - 1),
+                random.randint(0, ROWS - 1)
+            ]
+
+            golden_visible = True
+
+            # Poison Fruit
+            poison_food = [
+                random.randint(0, ROWS - 1),
+                random.randint(0, ROWS - 1)
+            ]
+
+            poison_visible = True
+
             if food not in snake:
                 break
+
+    elif golden_visible and head == golden_food:
+
+        score += 3
+        golden_visible = False
+
+    elif poison_visible and head == poison_food:
+
+        poison_visible = False
+        poison_timer = pygame.time.get_ticks()
 
     else:
         snake.pop()
@@ -295,7 +444,86 @@ def winner_screen():
 
     pygame.time.wait(5000)
 
+def level_complete():
 
+    global current_level
+    global highest_level
+    global score
+    global snake
+    global food
+    global direction
+    global next_direction
+
+    pygame.mixer.music.stop()
+    winner_sound.play()
+
+    screen.fill((20, 100, 20))
+
+    title = big_font.render("LEVEL COMPLETE!", True, YELLOW)
+    screen.blit(title, (70, 120))
+
+    if current_level < 10:
+        highest_level = max(highest_level, current_level + 1)
+
+        text = font.render(
+            f"Level {current_level + 1} Unlocked!",
+            True,
+            WHITE
+        )
+        screen.blit(text, (120, 220))
+    else:
+        text = font.render(
+            "You finished the game!",
+            True,
+            WHITE
+        )
+        screen.blit(text, (120, 220))
+
+    text2 = font.render(
+        "Press ENTER",
+        True,
+        GREEN
+    )
+    screen.blit(text2, (180, 320))
+
+    pygame.display.update()
+
+    while True:
+
+        for event in pygame.event.get():
+
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+
+                if event.key == pygame.K_RETURN:
+
+                    score = 0
+
+                    snake = [
+                        [10,10],
+                        [9,10],
+                        [8,10]
+                    ]
+
+                    direction = "RIGHT"
+                    next_direction = "RIGHT"
+
+                    food = [
+                        random.randint(0, ROWS-1),
+                        random.randint(0, ROWS-1)
+                    ]
+
+                    if current_level < 10:
+                        highest_level = max(highest_level, current_level + 1)
+
+                    pygame.mixer.music.play(-1)
+
+                    start_menu()
+
+                    return
 # ============================
 # PART 9 - GAME OVER SCREEN
 # ============================
@@ -362,7 +590,15 @@ start_menu()
 
 while running:
 
-    clock.tick(FPS)
+    current_fps = normal_fps
+
+    if poison_timer != 0:
+        if pygame.time.get_ticks() - poison_timer < 5000:
+            current_fps = slow_fps
+        else:
+            poison_timer = 0
+
+    clock.tick(current_fps)
 
     # Events
     for event in pygame.event.get():
@@ -390,6 +626,8 @@ while running:
     move_snake()
 
     head = snake[0]
+
+    
 
     # Wall Collision
     if (
@@ -441,7 +679,7 @@ while running:
             score = 0
 
             continue
-
+         
     draw_game()
 
 pygame.quit()
