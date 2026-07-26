@@ -116,6 +116,43 @@ slow_fps = 5
 
 poison_timer = 0
 
+star_food = [
+    random.randint(0, ROWS - 1),
+    random.randint(0, ROWS - 1)
+]
+
+star_visible = True
+
+# ============================
+# STAR POWER
+# ============================
+
+star_food = [
+    random.randint(0, ROWS - 1),
+    random.randint(0, ROWS - 1)
+]
+
+star_visible = True
+
+power_mode = False
+power_timer = 0
+
+
+# ============================
+# ENEMY SNAKE
+# ============================
+
+enemy_snake = [
+    [20, 20],
+    [21, 20],
+    [22, 20]
+]
+
+enemy_direction = "LEFT"
+
+# Pause button
+pause_button = pygame.Rect(550, 10, 40, 40)
+
 
 # ============================
 # PART 7 - DRAW GAME
@@ -290,7 +327,28 @@ def draw_game():
             ),
             CELL_SIZE // 2 - 2
         )
+    if star_visible:
+        cx = star_food[0] * CELL_SIZE + CELL_SIZE // 2
+        cy = star_food[1] * CELL_SIZE + CELL_SIZE // 2
 
+        pygame.draw.polygon(
+            screen,
+            YELLOW,
+            [
+                (cx, cy-9),
+                (cx+3, cy-3),
+                (cx+9, cy-3),
+                (cx+4, cy+2),
+                (cx+6, cy+9),
+                (cx, cy+5),
+                (cx-6, cy+9),
+                (cx-4, cy+2),
+                (cx-9, cy-3),
+                (cx-3, cy-3)
+            ]
+        )
+
+        
     # Draw Snake
     for i, block in enumerate(snake):
 
@@ -330,7 +388,19 @@ def draw_game():
                 (x+3, y+3, CELL_SIZE-6, CELL_SIZE-6),
                 border_radius=3
             )
+    for block in enemy_snake:
 
+        pygame.draw.rect(
+            screen,
+            RED,
+            (
+                block[0] * CELL_SIZE,
+                block[1] * CELL_SIZE,
+                CELL_SIZE,
+                CELL_SIZE
+            ),
+            border_radius=4
+        )
     # Score
     score_text = font.render(
         f"Score : {score}",
@@ -340,6 +410,14 @@ def draw_game():
 
     screen.blit(score_text, (10,10))
 
+   
+
+    pygame.draw.rect(screen, GRAY, pause_button, border_radius=8)
+
+    # left bar
+    pygame.draw.rect(screen, WHITE, (560, 18, 6, 24))
+    #Right bar
+    pygame.draw.rect(screen, WHITE, (574, 18, 6, 24))
     pygame.display.update()
 
 
@@ -355,6 +433,11 @@ def move_snake():
     global poison_food
     global poison_visible
     global poison_timer
+    global power_mode
+    global power_timer
+    global star_visible
+    global enemy_snake
+    global star_food
 
     head = snake[0].copy()
 
@@ -405,6 +488,13 @@ def move_snake():
             ]
 
             poison_visible = True
+                        # Make the star appear again
+            if not star_visible:
+                star_food = [
+                    random.randint(0, ROWS - 1),
+                    random.randint(0, ROWS - 1)
+                ]
+                star_visible = True
 
             if food not in snake:
                 break
@@ -419,8 +509,65 @@ def move_snake():
         poison_visible = False
         poison_timer = pygame.time.get_ticks()
 
+    elif star_visible and head == star_food:
+
+        star_visible = False
+        power_mode = True
+        power_timer = pygame.time.get_ticks()
+
+        # Create the next star
+        star_food = [
+            random.randint(0, ROWS - 1),
+            random.randint(0, ROWS - 1)
+        ]
     else:
         snake.pop()
+
+def move_enemy():
+
+    global enemy_direction
+
+    # Randomly change direction
+    if random.randint(1, 10) == 1:
+        enemy_direction = random.choice(
+            ["UP", "DOWN", "LEFT", "RIGHT"]
+        )
+
+    head = enemy_snake[0].copy()
+
+    # Move enemy
+    if enemy_direction == "UP":
+        head[1] -= 1
+
+    elif enemy_direction == "DOWN":
+        head[1] += 1
+
+    elif enemy_direction == "LEFT":
+        head[0] -= 1
+
+    elif enemy_direction == "RIGHT":
+        head[0] += 1
+
+    # Keep enemy inside the map
+    if head[0] < 0:
+        head[0] = 0
+        enemy_direction = "RIGHT"
+
+    elif head[0] >= ROWS:
+        head[0] = ROWS - 1
+        enemy_direction = "LEFT"
+
+    if head[1] < 0:
+        head[1] = 0
+        enemy_direction = "DOWN"
+
+    elif head[1] >= ROWS:
+        head[1] = ROWS - 1
+        enemy_direction = "UP"
+
+    # Move the enemy snake
+    enemy_snake.insert(0, head)
+    enemy_snake.pop()
 
 def winner_screen():
 
@@ -581,6 +728,40 @@ def game_over_screen():
                     pygame.quit()
                     sys.exit()
 
+#PAUSE MENU 
+
+def pause_menu():
+
+    while True:
+
+        screen.fill((30, 30, 30))
+
+        title = big_font.render("PAUSED", True, YELLOW)
+        screen.blit(title, (180, 180))
+
+        text = font.render("Press P to Resume", True, WHITE)
+        screen.blit(text, (170, 280))
+
+        text2 = font.render("Press ESC to Quit", True, RED)
+        screen.blit(text2, (175, 330))
+
+        pygame.display.update()
+
+        for event in pygame.event.get():
+
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+
+                if event.key == pygame.K_p:
+                    return
+
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+
 
 # ============================
 # PART 10 - MAIN GAME LOOP
@@ -599,6 +780,10 @@ while running:
             poison_timer = 0
 
     clock.tick(current_fps)
+    if power_mode:
+
+        if pygame.time.get_ticks() - power_timer > 8000:
+            power_mode = False
 
     # Events
     for event in pygame.event.get():
@@ -620,12 +805,49 @@ while running:
 
             elif event.key == pygame.K_RIGHT and direction != "LEFT":
                 next_direction = "RIGHT"
+            elif event.key == pygame.K_p:
+                pause_menu()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+
+                if pause_button.collidepoint(event.pos):
+                    pause_menu()
 
     direction = next_direction
 
     move_snake()
+    move_enemy()    
 
     head = snake[0]
+
+    if head in enemy_snake:
+        if power_mode:
+
+            score += 5          # Bonus points
+
+            enemy_snake = [
+                [random.randint(5, ROWS - 5), random.randint(5, ROWS - 5)],
+                [random.randint(5, ROWS - 5), random.randint(5, ROWS - 5)],
+                [random.randint(5, ROWS - 5), random.randint(5, ROWS - 5)]
+            ]
+
+            power_mode = False
+
+
+
+        else:
+
+            if game_over_screen():
+
+                snake = [
+                    [10,10],
+                    [9,10],
+                    [8,10]
+                ]
+
+                direction = "RIGHT"
+                next_direction = "RIGHT"
+                score = 0
 
     
 
@@ -652,6 +874,7 @@ while running:
                 random.randint(0, ROWS-1),
                 random.randint(0, ROWS-1)
             ]
+
 
             score = 0
 
